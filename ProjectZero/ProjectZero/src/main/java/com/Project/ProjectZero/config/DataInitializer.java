@@ -5,6 +5,7 @@ import com.Project.ProjectZero.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
@@ -17,6 +18,8 @@ public class DataInitializer implements CommandLineRunner {
     private final HotelRepository hotelRepo;
     private final MenuCategoryRepository catRepo;
     private final MenuItemRepository itemRepo;
+    private final KitchenStaffRepository staffRepo;
+    private final PasswordEncoder passwordEncoder;
 
     @Override
     public void run(String... args) {
@@ -64,7 +67,20 @@ public class DataInitializer implements CommandLineRunner {
         saveItem(hotel.getId(), ds.getId(), "Ice Cream Sundae", "3 scoops with toppings of your choice", "5.49",
                 "https://images.unsplash.com/photo-1563805042-7684c019e1cb?w=400");
 
-        log.info("Seeded hotel ID={} | admin: admin / admin123", hotel.getId());
+        // Kitchen staff
+        KitchenStaff staff = KitchenStaff.builder()
+                .username("kitchen1")
+                .passwordHash(passwordEncoder.encode("kitchen123"))
+                .name("Chef Kumar")
+                .hotelId(hotel.getId())
+                .build();
+        staffRepo.save(staff);
+
+        log.info("==========================================");
+        log.info("  Hotel ID: {} | Code: {}", hotel.getId(), hotel.getHotelCode());
+        log.info("  Admin: admin / admin123");
+        log.info("  Kitchen: kitchen1 / kitchen123 (hotelId={})", hotel.getId());
+        log.info("==========================================");
     }
 
     private void saveItem(Long hotelId, Long catId, String name, String desc, String price, String img) {

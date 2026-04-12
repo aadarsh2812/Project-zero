@@ -1,60 +1,104 @@
 import React, { useState } from 'react'
-import { Layout, Menu, Typography, Button } from 'antd'
-import { AppstoreOutlined, UnorderedListOutlined, ShoppingOutlined, DollarOutlined, LogoutOutlined, QrcodeOutlined } from '@ant-design/icons'
+import { Layout, Menu, Typography, Button, theme } from 'antd'
+import {
+  DashboardOutlined, ShoppingOutlined, AppstoreOutlined,
+  DollarOutlined, QrcodeOutlined, BgColorsOutlined,
+  BarChartOutlined, CreditCardOutlined, MessageOutlined,
+  LogoutOutlined
+} from '@ant-design/icons'
 import MenuManagement from './MenuManagement.jsx'
 import OrdersPanel from './OrdersPanel.jsx'
-import OfflinePayment from './OfflinePayment.jsx'
+import PaymentDashboard from './PaymentDashboard.jsx'
 import QrGenerator from './QrGenerator.jsx'
+import BrandingSettings from './BrandingSettings.jsx'
+import AnalyticsDashboard from './AnalyticsDashboard.jsx'
+import RazorpaySettings from './RazorpaySettings.jsx'
+import FeedbackPanel from './FeedbackPanel.jsx'
 
-const { Sider, Content, Header } = Layout
+const { Header, Sider, Content } = Layout
 const { Title, Text } = Typography
 
 const MENU_ITEMS = [
-  { key: 'menu',    icon: <AppstoreOutlined />,    label: 'Menu Management' },
-  { key: 'orders',  icon: <ShoppingOutlined />,    label: 'Orders' },
-  { key: 'offline', icon: <DollarOutlined />,      label: 'Offline Payment' },
-  { key: 'qr',      icon: <QrcodeOutlined />,      label: 'QR Codes' },
+  { key: 'analytics', icon: <BarChartOutlined />, label: 'Analytics' },
+  { key: 'orders', icon: <ShoppingOutlined />, label: 'Orders' },
+  { key: 'menu', icon: <AppstoreOutlined />, label: 'Menu' },
+  { key: 'payment', icon: <DollarOutlined />, label: 'Cash Verify' },
+  { key: 'razorpay', icon: <CreditCardOutlined />, label: 'Payment Config' },
+  { key: 'qr', icon: <QrcodeOutlined />, label: 'QR Codes' },
+  { key: 'branding', icon: <BgColorsOutlined />, label: 'Branding' },
+  { key: 'feedback', icon: <MessageOutlined />, label: 'Feedback' },
 ]
 
-export default function AdminDashboard({ adminData, onLogout }) {
-  const [page, setPage] = useState('menu')
+export default function AdminDashboard({ hotelId, hotelName, onLogout }) {
+  const [activeKey, setActiveKey] = useState('analytics')
   const [collapsed, setCollapsed] = useState(false)
 
-  const renderPage = () => {
-    switch (page) {
-      case 'menu':    return <MenuManagement hotelId={adminData.hotelId} />
-      case 'orders':  return <OrdersPanel hotelId={adminData.hotelId} />
-      case 'offline': return <OfflinePayment />
-      case 'qr':      return <QrGenerator hotelId={adminData.hotelId} />
-      default: return null
+  const renderContent = () => {
+    switch (activeKey) {
+      case 'analytics': return <AnalyticsDashboard hotelId={hotelId} />
+      case 'orders': return <OrdersPanel hotelId={hotelId} />
+      case 'menu': return <MenuManagement hotelId={hotelId} />
+      case 'payment': return <PaymentDashboard hotelId={hotelId} />
+      case 'razorpay': return <RazorpaySettings hotelId={hotelId} />
+      case 'qr': return <QrGenerator hotelId={hotelId} />
+      case 'branding': return <BrandingSettings hotelId={hotelId} />
+      case 'feedback': return <FeedbackPanel hotelId={hotelId} />
+      default: return <AnalyticsDashboard hotelId={hotelId} />
     }
   }
 
   return (
     <Layout style={{ minHeight: '100vh' }}>
-      <Sider collapsible collapsed={collapsed} onCollapse={setCollapsed}
-        style={{ background: '#001529' }} width={220}>
-        <div style={{ padding: collapsed ? '16px 8px' : '16px', textAlign: 'center', borderBottom: '1px solid rgba(255,255,255,0.1)', marginBottom: 8 }}>
-          {!collapsed && <Text strong style={{ color: '#fff', fontSize: 14 }}>{adminData.hotelName}</Text>}
+      <Sider
+        collapsible collapsed={collapsed} onCollapse={setCollapsed}
+        style={{ background: 'linear-gradient(180deg, #1a0533, #2d1b69)' }}
+        theme="dark"
+      >
+        <div style={{ padding: '24px 16px', textAlign: 'center' }}>
+          {!collapsed && (
+            <>
+              <Title level={4} style={{ color: '#fff', margin: 0, fontWeight: 800 }}>🏨</Title>
+              <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 12 }}>{hotelName || 'Admin'}</Text>
+            </>
+          )}
+          {collapsed && <Text style={{ color: '#fff', fontSize: 20 }}>🏨</Text>}
         </div>
-        <Menu theme="dark" selectedKeys={[page]} mode="inline"
-          items={MENU_ITEMS} onClick={({ key }) => setPage(key)} />
-        <div style={{ position: 'absolute', bottom: 16, width: '100%', padding: '0 16px' }}>
-          <Button icon={<LogoutOutlined />} block danger ghost onClick={onLogout}
-            style={{ fontSize: 13 }}>
+        <Menu
+          theme="dark"
+          mode="inline"
+          selectedKeys={[activeKey]}
+          onClick={({ key }) => setActiveKey(key)}
+          items={MENU_ITEMS}
+          style={{ background: 'transparent', borderRight: 'none' }}
+        />
+        <div style={{ position: 'absolute', bottom: 60, left: 0, right: 0, padding: '0 16px' }}>
+          <Button
+            danger ghost block
+            icon={<LogoutOutlined />}
+            onClick={onLogout}
+            style={{ borderRadius: 8 }}
+          >
             {!collapsed && 'Logout'}
           </Button>
         </div>
       </Sider>
+
       <Layout>
-        <Header style={{ background: '#fff', padding: '0 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', boxShadow: '0 1px 4px rgba(0,0,0,0.08)' }}>
-          <Title level={4} style={{ margin: 0 }}>
-            {MENU_ITEMS.find(m => m.key === page)?.label}
+        <Header style={{
+          background: '#fff', padding: '0 24px',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
+        }}>
+          <Title level={4} style={{ margin: 0, fontWeight: 700 }}>
+            {MENU_ITEMS.find(m => m.key === activeKey)?.label || 'Dashboard'}
           </Title>
-          <Text type="secondary">Logged in as <strong>{adminData.username}</strong></Text>
+          <Text type="secondary" style={{ fontSize: 12 }}>
+            Hotel ID: {hotelId}
+          </Text>
         </Header>
-        <Content style={{ margin: 24, background: '#f5f5f5', minHeight: '100%' }}>
-          {renderPage()}
+
+        <Content style={{ padding: 24, background: '#f5f5f5', minHeight: 360 }}>
+          {renderContent()}
         </Content>
       </Layout>
     </Layout>

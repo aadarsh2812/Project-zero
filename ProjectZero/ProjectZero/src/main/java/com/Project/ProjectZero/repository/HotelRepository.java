@@ -7,4 +7,5 @@ import java.util.Optional;
 public interface HotelRepository extends JpaRepository<Hotel, Long> {
     Optional<Hotel> findByAdminUsername(String adminUsername);
     Optional<Hotel> findByAdminUsernameAndAdminPassword(String username, String password);
+    Optional<Hotel> findByHotelCode(String hotelCode);
 }

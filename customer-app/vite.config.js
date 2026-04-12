@@ -5,7 +5,17 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 3000,
-    host: true   // bind to 0.0.0.0 — accessible on local network
+    host: true,
+    proxy: {
+      '/api': {
+        target: 'http://localhost:8080',
+        changeOrigin: true,
+      },
+      '/ws': {
+        target: 'ws://localhost:8080',
+        ws: true,
+      },
+    },
   },
   optimizeDeps: {
     include: ['@stomp/stompjs', 'axios', 'antd', '@ant-design/icons']

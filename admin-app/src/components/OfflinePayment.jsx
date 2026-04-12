@@ -1,10 +1,9 @@
 import React, { useState } from 'react'
 import { Card, Input, Button, Space, Typography, Tag, Divider, Alert, List, message, Radio, Result } from 'antd'
 import { SearchOutlined, DollarOutlined, CheckCircleOutlined } from '@ant-design/icons'
-import axios from 'axios'
+import api from '../api.js'
 
 const { Title, Text } = Typography
-const api = axios.create({ baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8080' })
 
 export default function OfflinePayment() {
   const [searchRef, setSearchRef]   = useState('')
@@ -93,13 +92,13 @@ export default function OfflinePayment() {
               {(order.items || []).map((item, i) => (
                 <div key={i} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
                   <Text>{item.quantity}× {item.itemName}</Text>
-                  <Text>${(item.price * item.quantity).toFixed(2)}</Text>
+                  <Text>₹{(item.price * item.quantity).toFixed(2)}</Text>
                 </div>
               ))}
               <Divider style={{ margin: '10px 0' }} />
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <Text strong style={{ fontSize: 16 }}>Total</Text>
-                <Text strong style={{ fontSize: 16, color: '#52c41a' }}>${order.totalAmount}</Text>
+                <Text strong style={{ fontSize: 16, color: '#52c41a' }}>₹{order.totalAmount}</Text>
               </div>
 
               {order.status !== 'PAID' ? (

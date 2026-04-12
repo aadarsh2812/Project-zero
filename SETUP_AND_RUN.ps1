@@ -107,8 +107,8 @@ if ($LASTEXITCODE -ne 0) {
     Write-OK "Docker is running"
 }
 
-# ── STEP 4: Start PostgreSQL + Redis containers ───────────────────────
-Write-Step 4 "Starting PostgreSQL + Redis (Docker Compose)..."
+# ── STEP 4: Start PostgreSQL containers ───────────────────────
+Write-Step 4 "Starting PostgreSQL (Docker Compose)..."
 Set-Location $PROJECT_ROOT
 & $DOCKER_EXE compose up -d 2>&1 | ForEach-Object { Write-Host "    $_" -ForegroundColor DarkGray }
 
@@ -117,17 +117,15 @@ $ready = $false
 for ($i = 0; $i -lt 24; $i++) {
     Start-Sleep -Seconds 5
     $pgCheck    = & $DOCKER_EXE exec hotel_postgres pg_isready -U postgres -d hoteldb 2>&1
-    $redisCheck = & $DOCKER_EXE exec hotel_redis redis-cli ping 2>&1
-    if ($pgCheck -match "accepting connections" -and $redisCheck -match "PONG") {
+    if ($pgCheck -match "accepting connections") {
         $ready = $true
         break
     }
-    Write-Host "    PostgreSQL: $pgCheck | Redis: $redisCheck" -ForegroundColor DarkGray
+    Write-Host "    PostgreSQL: $pgCheck" -ForegroundColor DarkGray
 }
 
 if ($ready) {
     Write-OK "PostgreSQL is accepting connections"
-    Write-OK "Redis is responding"
 } else {
     Write-WARN "Containers may still be starting. Continuing..."
 }
@@ -203,7 +201,7 @@ Write-Host "  Kitchen KDS   : http://localhost:3001" -ForegroundColor White
 Write-Host "  Admin Panel   : http://localhost:3002   [admin / admin123]" -ForegroundColor White
 Write-Host "  Backend API   : http://localhost:8080" -ForegroundColor White
 Write-Host "  PostgreSQL    : localhost:5432 / hoteldb" -ForegroundColor White
-Write-Host "  Redis         : localhost:6379" -ForegroundColor White
+
 Write-Host "============================================================" -ForegroundColor Magenta
 Write-Host ""
 Read-Host "Press Enter to close this window (services keep running)"

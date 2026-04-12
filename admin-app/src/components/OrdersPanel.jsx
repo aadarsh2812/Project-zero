@@ -1,69 +1,151 @@
 import React, { useState, useEffect } from 'react'
-import { Card, Table, Tag, Button, Space, Typography, message, Select, Badge } from 'antd'
-import { SyncOutlined } from '@ant-design/icons'
-import axios from 'axios'
+import { Card, Table, Tag, Button, Input, Space, message, Tabs, Popconfirm, Typography, Empty } from 'antd'
+import { SearchOutlined, DeleteOutlined, ReloadOutlined, ClearOutlined } from '@ant-design/icons'
+import api from '../api.js'
 
 const { Text } = Typography
-const api = axios.create({ baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8080' })
-
-const STATUS_COLOR = {
-  RECEIVED: 'blue', PREPARING: 'orange', READY: 'green', PAID: 'default'
-}
 
 export default function OrdersPanel({ hotelId }) {
-  const [orders, setOrders] = useState([])
+  const [activeOrders, setActiveOrders] = useState([])
+  const [completedOrders, setCompletedOrders] = useState([])
   const [loading, setLoading] = useState(false)
+  const [searchRef, setSearchRef] = useState('')
+  const [searchResult, setSearchResult] = useState(null)
 
-  const load = async () => {
+  const fetchActive = () => {
     setLoading(true)
-    try {
-      const r = await api.get(`/api/orders/hotel/${hotelId}`)
-      setOrders(r.data)
-    } catch { message.error('Failed to load orders') }
-    finally { setLoading(false) }
+    api.get(`/api/orders/hotel/${hotelId}/active`)
+      .then(r => setActiveOrders(r.data))
+      .catch(() => message.error('Failed to load active orders'))
+      .finally(() => setLoading(false))
   }
 
-  useEffect(() => { load() }, [hotelId])
+  const fetchCompleted = () => {
+    api.get(`/api/orders/hotel/${hotelId}/completed`)
+      .then(r => setCompletedOrders(r.data))
+      .catch(() => {})
+  }
 
-  const updateStatus = async (orderRef, status, paidVia) => {
-    await api.patch('/api/orders/status', { orderRef, status, paidVia })
-    message.success(`Order ${orderRef} → ${status}`)
-    load()
+  useEffect(() => { fetchActive(); fetchCompleted() }, [hotelId])
+
+  const handleSearch = () => {
+    if (!searchRef.trim()) { message.warning('Enter an order reference'); return }
+    api.get(`/api/orders/ref/${searchRef.trim()}`)
+      .then(r => setSearchResult(r.data))
+      .catch(() => { setSearchResult(null); message.error('Order not found') })
+  }
+
+  const handleDelete = (orderId) => {
+    api.delete(`/api/orders/${orderId}`)
+      .then(() => { message.success('Order deleted'); fetchCompleted() })
+      .catch(e => message.error(e.response?.data?.message || 'Failed to delete'))
+  }
+
+  const handleBulkDelete = () => {
+    api.delete(`/api/orders/hotel/${hotelId}/completed`)
+      .then(r => { message.success(r.data.message); fetchCompleted() })
+      .catch(() => message.error('Failed to delete'))
+  }
+
+  const statusColor = (s) => {
+    switch(s) {
+      case 'RECEIVED': return 'blue'
+      case 'PREPARING': return 'orange'
+      case 'READY': return 'green'
+      case 'PAID': return 'default'
+      default: return 'default'
+    }
   }
 
   const columns = [
-    { title: 'Ref', dataIndex: 'orderRef', render: v => <Text strong style={{ fontFamily: 'monospace' }}>{v}</Text> },
-    { title: 'Table', dataIndex: 'tableNo', width: 70 },
-    { title: 'Status', dataIndex: 'status', render: v => <Badge status={v === 'RECEIVED' ? 'processing' : v === 'PREPARING' ? 'warning' : v === 'READY' ? 'success' : 'default'} text={<Tag color={STATUS_COLOR[v]}>{v}</Tag>} /> },
-    { title: 'Total', dataIndex: 'totalAmount', render: v => <Text strong style={{ color: '#fa541c' }}>${v}</Text>, width: 90 },
-    { title: 'Paid Via', dataIndex: 'paidVia', render: v => v ? <Tag color="green">{v}</Tag> : <Tag>Unpaid</Tag>, width: 90 },
-    { title: 'Time', dataIndex: 'createdAt', render: v => v ? new Date(v).toLocaleString() : '-' },
-    {
-      title: 'Actions', render: (_, r) => (
-        <Space>
-          {r.status === 'RECEIVED' && <Button size="small" onClick={() => updateStatus(r.orderRef, 'PREPARING')}>Prepare</Button>}
-          {r.status === 'PREPARING' && <Button size="small" type="primary" onClick={() => updateStatus(r.orderRef, 'READY')}>Ready</Button>}
-          {r.status !== 'PAID' && <Button size="small" danger onClick={() => updateStatus(r.orderRef, 'PAID', 'CASH')}>Mark Paid</Button>}
-        </Space>
-      )
-    }
+    { title: 'Order Ref', dataIndex: 'orderRef', key: 'orderRef',
+      render: v => <Text strong style={{ fontFamily: 'monospace' }}>{v}</Text> },
+    { title: 'Table', dataIndex: 'tableNo', key: 'tableNo', render: v => `🪑 ${v}` },
+    { title: 'Items', key: 'items', render: (_, r) =>
+      (r.items || []).map((i,idx) => <div key={idx}>{i.quantity}× {i.itemName}</div>) },
+    { title: 'Total', dataIndex: 'totalAmount', key: 'total', render: v => `₹${v}` },
+    { title: 'Status', dataIndex: 'status', key: 'status',
+      render: v => <Tag color={statusColor(v)}>{v}</Tag> },
+    { title: 'Time', dataIndex: 'createdAt', key: 'time',
+      render: v => v ? new Date(v).toLocaleTimeString() : '-' },
+  ]
+
+  const completedColumns = [
+    ...columns,
+    { title: 'Action', key: 'action', render: (_, r) => (
+      <Popconfirm title="Delete this order?" onConfirm={() => handleDelete(r.id)}>
+        <Button size="small" danger icon={<DeleteOutlined />}>Delete</Button>
+      </Popconfirm>
+    )}
   ]
 
   return (
-    <Card title="All Orders" extra={<Button icon={<SyncOutlined />} onClick={load} loading={loading}>Refresh</Button>}>
-      <Table
-        dataSource={orders} columns={columns} rowKey="id" size="small"
-        expandable={{
-          expandedRowRender: r => (
-            <Table size="small" dataSource={r.items || []} pagination={false} rowKey="id"
-              columns={[
-                { title: 'Item', dataIndex: 'itemName' },
-                { title: 'Qty', dataIndex: 'quantity', width: 60 },
-                { title: 'Price', dataIndex: 'price', render: v => `$${v}`, width: 80 }
-              ]} />
+    <div>
+      {/* Search by order ref */}
+      <Card style={{ marginBottom: 16, borderRadius: 12 }} styles={{ body: { padding: 16 } }}>
+        <Space>
+          <Input placeholder="Search by Order Ref (e.g. ORD-A1B2C3)"
+            value={searchRef} onChange={e => setSearchRef(e.target.value)}
+            onPressEnter={handleSearch} style={{ width: 300, borderRadius: 8 }}
+            prefix={<SearchOutlined />} />
+          <Button type="primary" onClick={handleSearch}>Search</Button>
+          {searchResult && <Button onClick={() => setSearchResult(null)}>Clear</Button>}
+        </Space>
+        {searchResult && (
+          <Card size="small" style={{ marginTop: 12, borderRadius: 10, background: '#fafafa' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+              <div>
+                <Text strong style={{ fontFamily: 'monospace', fontSize: 16 }}>{searchResult.orderRef}</Text>
+                <br /><Text type="secondary">Table {searchResult.tableNo} • ₹{searchResult.totalAmount}</Text>
+              </div>
+              <Tag color={statusColor(searchResult.status)} style={{ height: 'fit-content', fontSize: 14, padding: '4px 12px' }}>
+                {searchResult.status}
+              </Tag>
+            </div>
+            <div style={{ marginTop: 8 }}>
+              {(searchResult.items || []).map((i, idx) => (
+                <Text key={idx} style={{ display: 'block', fontSize: 13 }}>{i.quantity}× {i.itemName} — ₹{i.price}</Text>
+              ))}
+            </div>
+          </Card>
+        )}
+      </Card>
+
+      <Tabs defaultActiveKey="active" items={[
+        {
+          key: 'active',
+          label: `Active Orders (${activeOrders.length})`,
+          children: (
+            <Card style={{ borderRadius: 12 }} extra={
+              <Button icon={<ReloadOutlined />} onClick={fetchActive}>Refresh</Button>
+            }>
+              <Table dataSource={activeOrders} columns={columns}
+                rowKey="id" pagination={false} size="small"
+                locale={{ emptyText: <Empty description="No active orders" /> }} />
+            </Card>
           )
-        }}
-      />
-    </Card>
+        },
+        {
+          key: 'completed',
+          label: `History (${completedOrders.length})`,
+          children: (
+            <Card style={{ borderRadius: 12 }} extra={
+              <Space>
+                <Button icon={<ReloadOutlined />} onClick={fetchCompleted}>Refresh</Button>
+                {completedOrders.length > 0 && (
+                  <Popconfirm title={`Delete all ${completedOrders.length} completed orders?`} onConfirm={handleBulkDelete}>
+                    <Button danger icon={<ClearOutlined />}>Delete All Completed</Button>
+                  </Popconfirm>
+                )}
+              </Space>
+            }>
+              <Table dataSource={completedOrders} columns={completedColumns}
+                rowKey="id" pagination={{ pageSize: 10 }} size="small"
+                locale={{ emptyText: <Empty description="No completed orders" /> }} />
+            </Card>
+          )
+        }
+      ]} />
+    </div>
   )
 }

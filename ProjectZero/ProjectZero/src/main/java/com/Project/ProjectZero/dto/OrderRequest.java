@@ -6,7 +6,8 @@ import java.util.List;
 
 @Data
 public class OrderRequest {
-    @NotNull private String customerToken;
+    // Set by JWT filter, not by client — no @NotNull validation
+    private String customerToken;
     @NotNull private Long hotelId;
     @NotNull private String tableNo;
     @NotNull private List<OrderItemRequest> items;

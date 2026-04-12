@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { Card, Form, Input, Button, Typography, Space, message } from 'antd'
-import { LockOutlined, UserOutlined, ThunderboltOutlined } from '@ant-design/icons'
-import axios from 'axios'
+import { LockOutlined, UserOutlined, ThunderboltOutlined, BankOutlined } from '@ant-design/icons'
+import api from '../api.js'
 
 const { Title, Text } = Typography
 
@@ -11,10 +11,15 @@ export default function KitchenLogin({ onLogin }) {
   const onFinish = async (values) => {
     setLoading(true)
     try {
-      const res = await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/admin/login`, values)
+      const res = await api.post(`/api/kitchen/login`, {
+        username: values.username,
+        password: values.password,
+        hotelId: Number(values.hotelId)
+      })
+      localStorage.setItem('kitchen_token', res.data.token)
       onLogin(res.data.hotelId)
     } catch {
-      message.error('Invalid credentials')
+      message.error('Invalid kitchen credentials')
     } finally {
       setLoading(false)
     }
@@ -31,8 +36,11 @@ export default function KitchenLogin({ onLogin }) {
           <Text style={{ color: 'rgba(255,255,255,0.6)' }}>Sign in to view live orders</Text>
         </Space>
         <Form onFinish={onFinish} layout="vertical" size="large">
+          <Form.Item name="hotelId" rules={[{ required: true }]}>
+            <Input prefix={<BankOutlined />} placeholder="Hotel ID" type="number" />
+          </Form.Item>
           <Form.Item name="username" rules={[{ required: true }]}>
-            <Input prefix={<UserOutlined />} placeholder="Admin username" />
+            <Input prefix={<UserOutlined />} placeholder="Username" />
           </Form.Item>
           <Form.Item name="password" rules={[{ required: true }]}>
             <Input.Password prefix={<LockOutlined />} placeholder="Password" />

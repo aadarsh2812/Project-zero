@@ -3,9 +3,8 @@ echo ============================================
 echo  Hotel QR Ordering System - Start All
 echo ============================================
 echo.
-echo [1/4] Starting PostgreSQL & Redis (make sure they are running)
+echo [1/4] Starting PostgreSQL (make sure they are running)
 echo        PostgreSQL: localhost:5432 / DB: hoteldb
-echo        Redis:      localhost:6379
 echo.
 echo [2/4] Starting Spring Boot backend on :8080
 start "Backend" cmd /k "cd /d "%~dp0ProjectZero\ProjectZero" && gradlew.bat bootRun"

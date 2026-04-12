@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { Card, Form, Input, Button, Typography, Space, message } from 'antd'
 import { LockOutlined, UserOutlined, DashboardOutlined } from '@ant-design/icons'
-import axios from 'axios'
+import api from '../api.js'
 
 const { Title, Text } = Typography
 
@@ -11,8 +11,10 @@ export default function AdminLogin({ onLogin }) {
   const onFinish = async (values) => {
     setLoading(true)
     try {
-      const res = await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/admin/login`, values)
-      onLogin(res.data)
+      const res = await api.post(`/api/admin/login`, values)
+      const data = res.data
+      localStorage.setItem('admin_token', data.token)
+      onLogin(data)
     } catch {
       message.error('Invalid credentials. Use admin / admin123')
     } finally { setLoading(false) }

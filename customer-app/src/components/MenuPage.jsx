@@ -1,21 +1,29 @@
 import React, { useState, useEffect, useRef } from 'react'
 import {
   Layout, Typography, Card, Row, Col, Button, Badge, Drawer, List,
-  InputNumber, Space, Tag, Affix, message, Spin, Empty, Avatar, Divider
+  Space, message, Spin, Empty, Divider, theme
 } from 'antd'
-import { ShoppingCartOutlined, MinusOutlined, PlusOutlined, DeleteOutlined, CheckOutlined } from '@ant-design/icons'
+import {
+  ShoppingCartOutlined, MinusOutlined, PlusOutlined,
+  DeleteOutlined, CheckOutlined, ArrowRightOutlined
+} from '@ant-design/icons'
 import { getMenu, placeOrder } from '../api.js'
+import { useI18n, LangToggle } from '../i18n/index.jsx'
+const { useToken } = theme;
 
 const { Header, Content } = Layout
 const { Title, Text } = Typography
 
-export default function MenuPage({ session, cart, setCart, onViewOrders }) {
+export default function MenuPage({ session, config, cart, setCart, onViewOrders }) {
   const [menu, setMenu]           = useState([])
   const [loading, setLoading]     = useState(true)
   const [activeCategory, setActiveCat] = useState(null)
   const [drawerOpen, setDrawer]   = useState(false)
   const [ordering, setOrdering]   = useState(false)
   const categoryRefs              = useRef({})
+  const catScrollRef              = useRef(null)
+  const { token: { colorPrimary } } = useToken();
+  const { t } = useI18n()
 
   useEffect(() => {
     const cached = sessionStorage.getItem(`menu_${session.hotelId}`)
@@ -24,14 +32,13 @@ export default function MenuPage({ session, cart, setCart, onViewOrders }) {
       setMenu(data)
       if (data.length) setActiveCat(data[0].id)
       setLoading(false)
-      return
     }
     getMenu(session.hotelId).then(r => {
       setMenu(r.data)
-      if (r.data.length) setActiveCat(r.data[0].id)
+      if (r.data.length && !cached) setActiveCat(r.data[0].id)
       sessionStorage.setItem(`menu_${session.hotelId}`, JSON.stringify(r.data))
       setLoading(false)
-    }).catch(() => { message.error('Failed to load menu'); setLoading(false) })
+    }).catch(() => { if (!cached) message.error('Failed to load menu'); setLoading(false) })
   }, [])
 
   const cartTotal = cart.reduce((s, i) => s + i.price * i.qty, 0)
@@ -55,92 +62,137 @@ export default function MenuPage({ session, cart, setCart, onViewOrders }) {
     setOrdering(true)
     try {
       await placeOrder({
-        customerToken: session.token,
         hotelId: session.hotelId,
         tableNo: session.tableNo,
         items: cart.map(c => ({ menuItemId: c.menuItemId, quantity: c.qty }))
       })
       setCart([])
       setDrawer(false)
-      message.success({ content: 'Order placed! Kitchen is preparing your food.', duration: 4 })
+      message.success({ content: `✅ ${t('orderPlaced')}`, duration: 4 })
       onViewOrders()
-    } catch {
-      message.error('Failed to place order. Please try again.')
+    } catch (err) {
+      message.error(err.response?.data?.message || 'Failed to place order. Please try again.')
     } finally {
       setOrdering(false)
     }
   }
 
   if (loading) return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16 }}>
       <Spin size="large" />
+      <Text style={{ color: '#999' }}>Loading delicious menu...</Text>
     </div>
   )
 
   return (
-    <Layout style={{ minHeight: '100vh', background: '#f5f5f5' }}>
+    <Layout style={{ minHeight: '100vh', background: '#f8f9fb' }}>
       {/* Header */}
-      <Header style={{ background: 'linear-gradient(135deg, #fa541c, #ff7a45)', padding: '0 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 100 }}>
+      <Header style={{
+        background: `linear-gradient(135deg, ${colorPrimary}, ${config?.secondaryColor || '#ff8f66'})`,
+        padding: '0 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        position: 'sticky', top: 0, zIndex: 100, height: 60,
+        boxShadow: '0 2px 12px rgba(0,0,0,0.12)',
+      }}>
         <div>
-          <Title level={4} style={{ color: '#fff', margin: 0 }}>{session.hotelName}</Title>
-          <Text style={{ color: 'rgba(255,255,255,0.85)', fontSize: 12 }}>Table {session.tableNo} • {session.customerName}</Text>
+          <Title level={4} style={{ color: '#fff', margin: 0, fontWeight: 700, fontSize: 17, letterSpacing: '-0.01em' }}>
+            {config?.appName || session.hotelName || 'Menu'}
+          </Title>
+          <Text style={{ color: 'rgba(255,255,255,0.85)', fontSize: 11 }}>
+            🪑 Table {session.tableNo} • {session.customerName}
+          </Text>
         </div>
-        <Space>
-          <Button type="text" style={{ color: '#fff' }} onClick={onViewOrders}>My Orders</Button>
-          <Badge count={cartCount} offset={[-2, 2]}>
-            <Button shape="circle" icon={<ShoppingCartOutlined style={{ fontSize: 20 }} />}
+        <Space size={8}>
+          <Button type="text" style={{ color: '#fff', fontWeight: 500, fontSize: 13 }} onClick={onViewOrders}>
+            My Orders <ArrowRightOutlined />
+          </Button>
+          <Badge count={cartCount} offset={[-2, 2]} color={colorPrimary}>
+            <Button shape="circle" icon={<ShoppingCartOutlined style={{ fontSize: 18 }} />}
               onClick={() => setDrawer(true)}
-              style={{ background: 'rgba(255,255,255,0.2)', border: 'none', color: '#fff' }} />
+              style={{ background: 'rgba(255,255,255,0.2)', border: 'none', color: '#fff', width: 38, height: 38 }} />
           </Badge>
         </Space>
       </Header>
 
-      {/* Category tabs */}
-      <div style={{ background: '#fff', padding: '0 16px', overflowX: 'auto', whiteSpace: 'nowrap', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', position: 'sticky', top: 64, zIndex: 99 }}>
+      {/* Category Chips */}
+      <div ref={catScrollRef} style={{
+        background: '#fff', padding: '10px 16px', overflowX: 'auto', whiteSpace: 'nowrap',
+        boxShadow: '0 1px 6px rgba(0,0,0,0.04)', position: 'sticky', top: 60, zIndex: 99,
+        display: 'flex', gap: 6, scrollbarWidth: 'none',
+      }}>
         {menu.map(cat => (
-          <Button key={cat.id} type={activeCategory === cat.id ? 'primary' : 'text'}
-            style={{ margin: '8px 4px', borderRadius: 20, ...(activeCategory === cat.id ? { background: '#fa541c', border: 'none' } : {}) }}
+          <button key={cat.id}
+            className={`category-chip ${activeCategory === cat.id ? 'active' : ''}`}
+            style={activeCategory === cat.id ? { background: colorPrimary } : {}}
             onClick={() => {
               setActiveCat(cat.id)
               categoryRefs.current[cat.id]?.scrollIntoView({ behavior: 'smooth', block: 'start' })
             }}>
             {cat.name}
-          </Button>
+          </button>
         ))}
       </div>
 
-      {/* Menu items */}
+      {/* Menu Items */}
       <Content style={{ padding: 16 }}>
-        {menu.map(cat => (
-          <div key={cat.id} ref={el => categoryRefs.current[cat.id] = el} style={{ marginBottom: 24 }}>
-            <Title level={5} style={{ marginBottom: 12, color: '#fa541c' }}>{cat.name}</Title>
+        {menu.map((cat, catIdx) => (
+          <div key={cat.id} ref={el => categoryRefs.current[cat.id] = el}
+            className="animate-fadeInUp" style={{ marginBottom: 28, animationDelay: `${catIdx * 0.05}s` }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+              <div style={{
+                width: 4, height: 22, borderRadius: 2,
+                background: `linear-gradient(180deg, ${colorPrimary}, ${config?.secondaryColor || '#ff8f66'})`,
+              }} />
+              <Title level={5} style={{ margin: 0, fontWeight: 700, fontSize: 16, letterSpacing: '-0.01em' }}>
+                {cat.name}
+              </Title>
+              <Text style={{ color: '#bbb', fontSize: 12 }}>{cat.items.length} items</Text>
+            </div>
             <Row gutter={[12, 12]}>
-              {cat.items.map(item => {
+              {cat.items.map((item, idx) => {
                 const cartItem = cart.find(c => c.menuItemId === item.id)
                 return (
                   <Col xs={24} sm={12} md={8} key={item.id}>
-                    <Card
-                      hoverable bodyStyle={{ padding: 12 }}
-                      style={{ borderRadius: 12, overflow: 'hidden', border: cartItem ? '2px solid #fa541c' : '1px solid #f0f0f0' }}
-                      cover={<img src={item.imageUrl} alt={item.name} style={{ height: 160, objectFit: 'cover' }}
-                        onError={e => e.target.src = 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400'} />}
-                    >
-                      <Text strong style={{ display: 'block', marginBottom: 4 }}>{item.name}</Text>
-                      <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 8 }}>{item.description}</Text>
+                    <Card className="food-card" hoverable
+                      style={{
+                        border: cartItem ? `2px solid ${colorPrimary}` : undefined,
+                        position: 'relative',
+                      }}
+                      styles={{ body: { padding: 12 } }}
+                      cover={
+                        <div style={{ overflow: 'hidden', height: 150 }}>
+                          <img src={item.imageUrl} alt={item.name}
+                            style={{ width: '100%', height: 150, objectFit: 'cover' }}
+                            onError={e => e.target.src = 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400'} />
+                          {cartItem && (
+                            <div className="added-badge">✓ In Cart</div>
+                          )}
+                        </div>
+                      }>
+                      <Text strong style={{ display: 'block', marginBottom: 2, fontSize: 14 }}>{item.name}</Text>
+                      <Text type="secondary" style={{ fontSize: 11, display: 'block', marginBottom: 10, lineHeight: '1.4' }}>
+                        {item.description}
+                      </Text>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <Text strong style={{ color: '#fa541c', fontSize: 16 }}>${item.price}</Text>
+                        <Text strong style={{ color: colorPrimary, fontSize: 17, fontWeight: 700 }}>₹{item.price}</Text>
                         {cartItem ? (
-                          <Space>
+                          <Space size={4}>
                             <Button size="small" shape="circle" icon={<MinusOutlined />}
-                              onClick={() => changeQty(item.id, cartItem.qty - 1)} />
-                            <Text strong>{cartItem.qty}</Text>
+                              onClick={() => changeQty(item.id, cartItem.qty - 1)}
+                              style={{ width: 28, height: 28, fontSize: 12 }} />
+                            <Text strong style={{ minWidth: 20, textAlign: 'center', fontSize: 14 }}>{cartItem.qty}</Text>
                             <Button size="small" shape="circle" icon={<PlusOutlined />}
-                              style={{ background: '#fa541c', border: 'none', color: '#fff' }}
+                              style={{ background: colorPrimary, border: 'none', color: '#fff', width: 28, height: 28 }}
                               onClick={() => changeQty(item.id, cartItem.qty + 1)} />
                           </Space>
                         ) : (
-                          <Button type="primary" size="small" style={{ background: '#fa541c', border: 'none', borderRadius: 8 }}
-                            onClick={() => addToCart(item)}>Add</Button>
+                          <Button size="small" onClick={() => addToCart(item)}
+                            style={{
+                              background: `${colorPrimary}10`, color: colorPrimary,
+                              border: `1px solid ${colorPrimary}30`, borderRadius: 8,
+                              fontWeight: 600, fontSize: 12,
+                            }}>
+                            + ADD
+                          </Button>
                         )}
                       </div>
                     </Card>
@@ -150,44 +202,67 @@ export default function MenuPage({ session, cart, setCart, onViewOrders }) {
             </Row>
           </div>
         ))}
-        {!menu.length && <Empty description="Menu not available" />}
-        <div style={{ height: 80 }} />
+        {!menu.length && <Empty description="Menu not available" style={{ marginTop: 64 }} />}
+        <div style={{ height: 90 }} />
       </Content>
 
-      {/* Sticky bottom cart bar */}
+      {/* Sticky Cart Bar */}
       {cartCount > 0 && (
-        <div style={{ position: 'fixed', bottom: 16, left: 16, right: 16, zIndex: 200 }}>
+        <div className="cart-bar">
           <Button type="primary" block size="large" onClick={() => setDrawer(true)}
-            style={{ height: 56, borderRadius: 28, background: 'linear-gradient(135deg, #fa541c, #ff7a45)', border: 'none', fontSize: 16, boxShadow: '0 8px 24px rgba(250,84,28,0.4)' }}>
-            <ShoppingCartOutlined /> View Cart ({cartCount} items) — ${cartTotal.toFixed(2)}
+            className="btn-primary"
+            style={{
+              background: `linear-gradient(135deg, ${colorPrimary}, ${config?.secondaryColor || '#ff8f66'})`,
+              fontSize: 15, fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+            }}>
+            <ShoppingCartOutlined /> View Cart ({cartCount} items) — ₹{cartTotal.toFixed(2)}
           </Button>
         </div>
       )}
 
       {/* Cart Drawer */}
-      <Drawer title="Your Cart" placement="bottom" height={500} open={drawerOpen} onClose={() => setDrawer(false)}
-        extra={<Button type="primary" loading={ordering} icon={<CheckOutlined />}
-          style={{ background: '#fa541c', border: 'none' }} onClick={handleOrder}
-          disabled={!cart.length}>Place Order</Button>}>
+      <Drawer
+        title={<Text strong style={{ fontSize: 18 }}>🛒 Your Cart</Text>}
+        placement="bottom" height="70vh" open={drawerOpen} onClose={() => setDrawer(false)}
+        styles={{ body: { padding: '12px 20px' } }}
+        extra={
+          <Button type="primary" loading={ordering} icon={<CheckOutlined />}
+            className="btn-primary" onClick={handleOrder}
+            disabled={!cart.length} style={{ borderRadius: 20 }}>
+            Place Order
+          </Button>
+        }>
         {!cart.length ? <Empty description="Your cart is empty" /> : (
           <>
             <List dataSource={cart} renderItem={item => (
-              <List.Item actions={[
-                <Button danger size="small" icon={<DeleteOutlined />}
-                  onClick={() => setCart(p => p.filter(c => c.menuItemId !== item.menuItemId))} />
-              ]}>
-                <List.Item.Meta title={item.name} description={`$${item.price} × ${item.qty}`} />
-                <Space>
-                  <Button size="small" icon={<MinusOutlined />} onClick={() => changeQty(item.menuItemId, item.qty - 1)} />
+              <List.Item
+                style={{ padding: '12px 0', borderBottom: '1px solid #f0f0f0' }}
+                actions={[
+                  <Button danger size="small" icon={<DeleteOutlined />}
+                    onClick={() => setCart(p => p.filter(c => c.menuItemId !== item.menuItemId))}
+                    style={{ borderRadius: 8 }} />
+                ]}>
+                <div style={{ flex: 1, marginRight: 16 }}>
+                  <Text strong style={{ fontSize: 14 }}>{item.name}</Text>
+                  <br />
+                  <Text type="secondary" style={{ fontSize: 12 }}>₹{item.price} × {item.qty}</Text>
+                </div>
+                <Space size={6}>
+                  <Button size="small" shape="circle" icon={<MinusOutlined />}
+                    onClick={() => changeQty(item.menuItemId, item.qty - 1)} />
                   <Text strong>{item.qty}</Text>
-                  <Button size="small" icon={<PlusOutlined />} onClick={() => changeQty(item.menuItemId, item.qty + 1)} />
+                  <Button size="small" shape="circle" icon={<PlusOutlined />}
+                    onClick={() => changeQty(item.menuItemId, item.qty + 1)} />
                 </Space>
               </List.Item>
             )} />
-            <Divider />
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <Divider style={{ margin: '16px 0' }} />
+            <div style={{
+              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+              padding: '12px 16px', background: `${colorPrimary}08`, borderRadius: 12,
+            }}>
               <Text strong style={{ fontSize: 18 }}>Total</Text>
-              <Text strong style={{ fontSize: 18, color: '#fa541c' }}>${cartTotal.toFixed(2)}</Text>
+              <Text strong style={{ fontSize: 22, color: colorPrimary }}>₹{cartTotal.toFixed(2)}</Text>
             </div>
           </>
         )}

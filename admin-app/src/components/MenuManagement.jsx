@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react'
 import { Card, Table, Button, Modal, Form, Input, InputNumber, Select, Switch, Space, Typography, Popconfirm, message, Tag, Image, Tabs } from 'antd'
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons'
-import axios from 'axios'
+import api from '../api.js'
 
 const { Text } = Typography
-const api = axios.create({ baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8080' })
 
 export default function MenuManagement({ hotelId }) {
   const [categories, setCategories] = useState([])
@@ -82,7 +81,7 @@ export default function MenuManagement({ hotelId }) {
     { title: 'Image', width: 70, render: (_, r) => <Image src={r.imageUrl} width={50} height={40} style={{ objectFit: 'cover', borderRadius: 6 }} fallback="https://placehold.co/50x40" /> },
     { title: 'Name', dataIndex: 'name', render: (v, r) => <><Text strong>{v}</Text><br /><Text type="secondary" style={{ fontSize: 11 }}>{r.description}</Text></> },
     { title: 'Category', render: (_, r) => { const c = categories.find(c => c.id === r.categoryId); return c ? <Tag>{c.name}</Tag> : '-' } },
-    { title: 'Price', dataIndex: 'price', render: v => <Text strong style={{ color: '#fa541c' }}>${v}</Text>, width: 80 },
+    { title: 'Price', dataIndex: 'price', render: v => <Text strong style={{ color: '#fa541c' }}>₹{v}</Text>, width: 80 },
     { title: 'Available', dataIndex: 'available', render: v => <Tag color={v ? 'green' : 'red'}>{v ? 'Yes' : 'No'}</Tag>, width: 90 },
     {
       title: 'Actions', width: 100, render: (_, r) => (
@@ -137,8 +136,8 @@ export default function MenuManagement({ hotelId }) {
           <Form.Item name="description" label="Description">
             <Input.TextArea rows={2} />
           </Form.Item>
-          <Form.Item name="price" label="Price (USD)" rules={[{ required: true }]}>
-            <InputNumber prefix="$" min={0} step={0.5} style={{ width: '100%' }} />
+          <Form.Item name="price" label="Price (INR)" rules={[{ required: true }]}>
+            <InputNumber prefix="₹" min={0} step={0.5} style={{ width: '100%' }} />
           </Form.Item>
           <Form.Item name="categoryId" label="Category" rules={[{ required: true }]}>
             <Select options={categories.map(c => ({ value: c.id, label: c.name }))} />

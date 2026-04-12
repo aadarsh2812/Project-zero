@@ -21,23 +21,38 @@ public class OrderService {
     private final OrderItemRepository orderItemRepo;
     private final MenuItemRepository menuItemRepo;
     private final CustomerRepository customerRepo;
-    private final RedisService redisService;
+    private final CustomerSessionRepository sessionRepo;
     private final SimpMessagingTemplate messagingTemplate;
 
     @Transactional
     public Order placeOrder(OrderRequest req) {
         // Validate customer session
-        Customer customer = customerRepo.findByToken(req.getCustomerToken())
-                .orElseThrow(() -> new RuntimeException("Invalid customer token"));
+        CustomerSession session = sessionRepo.findByToken(req.getCustomerToken())
+                .orElseThrow(() -> new RuntimeException("Invalid session token"));
 
-        // Generate ORD-XXX reference
-        long count = orderRepo.countByHotelId(req.getHotelId()) + 1;
-        String orderRef = String.format("ORD-%03d", count);
+        // Session continuity: Allow ACTIVE and COMPLETED sessions to place orders
+        // Only block truly PAID sessions. COMPLETED means bill generated but not yet paid.
+        if (session.getStatus() == CustomerSession.SessionStatus.PAID) {
+            throw new RuntimeException("Session is already paid. Please start a new session to order.");
+        }
+
+        // Reactivate COMPLETED session if user comes back to order more
+        if (session.getStatus() == CustomerSession.SessionStatus.COMPLETED) {
+            session.setStatus(CustomerSession.SessionStatus.ACTIVE);
+            sessionRepo.save(session);
+        }
+
+        Customer customer = customerRepo.findById(session.getCustomerId())
+                .orElseThrow(() -> new RuntimeException("Invalid customer"));
+
+        // Fix #4: Use UUID-based order ref to prevent concurrent collisions
+        String orderRef = "ORD-" + UUID.randomUUID().toString().substring(0, 6).toUpperCase();
 
         // Build order
         Order order = orderRepo.save(Order.builder()
                 .orderRef(orderRef)
                 .customerId(customer.getId())
+                .sessionId(session.getId())
                 .tableNo(req.getTableNo())
                 .hotelId(req.getHotelId())
                 .status(Order.OrderStatus.RECEIVED)
@@ -50,6 +65,12 @@ public class OrderService {
         for (OrderRequest.OrderItemRequest ir : req.getItems()) {
             MenuItem menuItem = menuItemRepo.findById(ir.getMenuItemId())
                     .orElseThrow(() -> new RuntimeException("Menu item not found: " + ir.getMenuItemId()));
+
+            // Fix #14: Check item availability before allowing order
+            if (menuItem.getAvailable() != null && !menuItem.getAvailable()) {
+                throw new RuntimeException("Item '" + menuItem.getName() + "' is currently unavailable.");
+            }
+
             BigDecimal linePrice = menuItem.getPrice().multiply(BigDecimal.valueOf(ir.getQuantity()));
             total = total.add(linePrice);
             items.add(orderItemRepo.save(OrderItem.builder()
@@ -65,8 +86,8 @@ public class OrderService {
         order.setItems(items);
         order = orderRepo.save(order);
 
-        // Publish to Redis Pub/Sub → triggers WebSocket push in subscriber
-        redisService.publishKitchenEvent(req.getHotelId(), buildKitchenPayload(order, customer));
+        String kitchenTopic = "/topic/hotel/" + req.getHotelId() + "/kitchen";
+        messagingTemplate.convertAndSend(kitchenTopic, (Object) buildKitchenPayload(order, customer));
 
         log.info("Order {} placed for table {} in hotel {}", orderRef, req.getTableNo(), req.getHotelId());
         return order;
@@ -109,14 +130,39 @@ public class OrderService {
         return orderRepo.findByHotelIdOrderByCreatedAtDesc(hotelId);
     }
 
-    public List<Order> getCustomerOrders(String token) {
-        Customer customer = customerRepo.findByToken(token)
+    public List<Order> getCompletedOrders(Long hotelId) {
+        return orderRepo.findByHotelIdAndStatusInOrderByCreatedAtDesc(hotelId,
+                List.of(Order.OrderStatus.PAID));
+    }
+
+    // Fix #6: Get orders by sessionId, not customerId
+    public List<Order> getCustomerOrders(String sessionToken) {
+        CustomerSession session = sessionRepo.findByToken(sessionToken)
                 .orElseThrow(() -> new RuntimeException("Invalid token"));
-        return orderRepo.findByCustomerIdOrderByCreatedAtDesc(customer.getId());
+        return orderRepo.findBySessionIdOrderByCreatedAtDesc(session.getId());
     }
 
     public Optional<Order> findByRef(String orderRef) {
         return orderRepo.findByOrderRef(orderRef);
+    }
+
+    // Delete a single completed order (soft: mark DELETED, or hard delete)
+    @Transactional
+    public void deleteOrder(Long orderId) {
+        Order order = orderRepo.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Order not found"));
+        if (order.getStatus() != Order.OrderStatus.PAID) {
+            throw new RuntimeException("Can only delete completed/paid orders");
+        }
+        orderRepo.delete(order);
+    }
+
+    // Bulk delete completed orders for a hotel
+    @Transactional
+    public int deleteCompletedOrders(Long hotelId) {
+        List<Order> completed = getCompletedOrders(hotelId);
+        orderRepo.deleteAll(completed);
+        return completed.size();
     }
 
     private Map<String, Object> buildKitchenPayload(Order order, Customer customer) {
@@ -132,6 +178,7 @@ public class OrderService {
         payload.put("items", order.getItems().stream().map(i -> {
             Map<String, Object> m = new LinkedHashMap<>();
             m.put("name", i.getItemName());
+            m.put("itemName", i.getItemName());
             m.put("quantity", i.getQuantity());
             m.put("price", i.getPrice());
             return m;

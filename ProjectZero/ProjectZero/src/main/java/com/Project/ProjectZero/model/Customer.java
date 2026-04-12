@@ -14,9 +14,18 @@ public class Customer {
     @Column(nullable = false)
     private String name;
 
-    @Column(nullable = false)
     private String phone;
 
+    private String email;
+
+    // Google OAuth subject ID — unique per Google account
+    @Column(name = "google_id", unique = true)
+    private String googleId;
+
+    @Column(name = "profile_picture")
+    private String profilePicture;
+
+    // Legacy token field (kept for backward compatibility)
     @Column(unique = true, nullable = false)
     private String token;
 

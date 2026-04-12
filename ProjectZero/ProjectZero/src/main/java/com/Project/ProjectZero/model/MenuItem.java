@@ -22,6 +22,10 @@ public class MenuItem {
     @Column(name = "image_url")
     private String imageUrl;
 
+    @Column(name = "is_custom_image")
+    @Builder.Default
+    private Boolean isCustomImage = false;
+
     @Column(name = "category_id", nullable = false)
     private Long categoryId;
 

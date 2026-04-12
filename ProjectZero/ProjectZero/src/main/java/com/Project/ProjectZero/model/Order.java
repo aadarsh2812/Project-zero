@@ -22,6 +22,9 @@ public class Order {
     @Column(name = "table_no", nullable = false)
     private String tableNo;
 
+    @Column(name = "session_id")
+    private String sessionId;
+
     @Column(name = "hotel_id", nullable = false)
     private Long hotelId;
 

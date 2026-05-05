@@ -1,0 +1,143 @@
+.kitchen-page {
+  min-height: 100vh;
+  background: var(--bg);
+  padding: 0;
+}
+
+.kitchen-header {
+  background: var(--bg-secondary);
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.kitchen-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.kitchen-content {
+  padding: 24px;
+}
+
+.orders-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+.k-order-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: var(--shadow-md);
+  transition: transform 0.2s;
+}
+
+.k-card-header {
+  padding: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 2px dashed var(--border);
+}
+
+.k-order-id {
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+
+.k-table-badge {
+  background: var(--text);
+  color: var(--bg-secondary);
+  padding: 4px 12px;
+  border-radius: var(--radius-sm);
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.k-card-body {
+  padding: 16px;
+  flex: 1;
+}
+
+.k-item-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  font-size: 1.1rem;
+  font-weight: 500;
+}
+
+.k-item-qty {
+  color: var(--text-muted);
+  width: 40px;
+}
+
+.k-card-footer {
+  padding: 16px;
+  background: var(--bg);
+  border-top: 1px solid var(--border);
+}
+
+.k-btn {
+  width: 100%;
+  padding: 14px;
+  border-radius: var(--radius-md);
+  border: none;
+  font-weight: 700;
+  font-size: 1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.2s;
+}
+
+.k-btn-prepare {
+  background: var(--warning);
+  color: #fff;
+}
+
+.k-btn-prepare:hover {
+  background: #D97706;
+}
+
+.k-btn-ready {
+  background: var(--success);
+  color: #fff;
+}
+
+.k-btn-ready:hover {
+  background: #059669;
+}
+
+.empty-kitchen {
+  text-align: center;
+  padding: 100px 20px;
+  color: var(--text-muted);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.empty-icon {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text);
+}

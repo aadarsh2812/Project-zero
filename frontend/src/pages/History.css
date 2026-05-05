@@ -1,0 +1,110 @@
+.history-page {
+  min-height: 100vh;
+  background: var(--bg);
+  padding: 0;
+}
+
+.history-header {
+  padding: 16px 20px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.history-title {
+  font-weight: 700;
+  font-size: 1.2rem;
+  margin: 0;
+  flex: 1;
+}
+
+.history-content {
+  padding: 24px 20px;
+}
+
+.history-empty {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--text-muted);
+}
+
+.history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.hist-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 16px;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.hist-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.hist-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  border-bottom: 1px dashed var(--border);
+  padding-bottom: 12px;
+}
+
+.hist-id {
+  font-weight: 700;
+  font-size: 1.05rem;
+  color: var(--text);
+}
+
+.hist-status {
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+}
+
+.hist-status.ordered {
+  background: var(--primary-light);
+  color: var(--primary);
+}
+
+.hist-status.preparing {
+  background: rgba(245, 158, 11, 0.15);
+  color: #D97706;
+}
+
+.hist-status.ready {
+  background: var(--success-light);
+  color: var(--success);
+}
+
+.hist-card-body {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.95rem;
+}
+
+.hist-items {
+  color: var(--text-muted);
+}
+
+.hist-amount {
+  font-weight: 700;
+  color: var(--text);
+}

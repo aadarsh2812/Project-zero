@@ -1,0 +1,92 @@
+.post-payment-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 40px 20px;
+  background: var(--bg);
+  text-align: center;
+}
+
+.success-check-wrapper {
+  width: 80px;
+  height: 80px;
+  background: var(--success-light);
+  color: var(--success);
+  border-radius: 50%;
+  border: 4px solid var(--success-light);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 24px;
+}
+
+.thank-you-title {
+  color: var(--text);
+  margin-bottom: 8px;
+  font-size: 2rem;
+  font-weight: 700;
+}
+
+.greeting-desc {
+  color: var(--text-muted);
+  margin-bottom: 40px;
+  font-size: 1.05rem;
+  max-width: 300px;
+  line-height: 1.5;
+}
+
+.feedback-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  width: 100%;
+  max-width: 360px;
+  box-shadow: var(--shadow-md);
+  margin-bottom: 32px;
+}
+
+.feedback-title {
+  font-weight: 600;
+  font-size: 1.1rem;
+  margin-bottom: 16px;
+  color: var(--text);
+}
+
+.stars-container {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.star-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted);
+  padding: 4px;
+  transition: all 0.2s ease;
+}
+
+.star-btn:hover {
+  transform: scale(1.1);
+}
+
+.star-btn.active {
+  color: var(--warning);
+}
+
+.feedback-text {
+  font-size: 0.9rem;
+  color: var(--success);
+  font-weight: 600;
+  min-height: 20px;
+}
+
+.home-btn {
+  width: 100%;
+  max-width: 360px;
+}
